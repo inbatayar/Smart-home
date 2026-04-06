@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>בית חכם</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0c0c1a;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  min-height: 100vh;
+  direction: rtl;
+  overflow-x: hidden;
+}
+.bg-orb1 { position: fixed; top: -120px; right: -80px; width: 380px; height: 380px; background: radial-gradient(circle, rgba(90,70,220,0.13) 0%, transparent 70%); border-radius: 50%; pointer-events: none; z-index: 0; }
+.bg-orb2 { position: fixed; bottom: 100px; left: -60px; width: 260px; height: 260px; background: radial-gradient(circle, rgba(255,180,50,0.08) 0%, transparent 70%); border-radius: 50%; pointer-events: none; z-index: 0; }
+
+.app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding-bottom: 90px; }
+
+/* Header */
+.header { padding: 52px 20px 18px; display: flex; justify-content: space-between; align-items: flex-start; }
+.header-time { font-size: 12px; color: rgba(255,255,255,0.36); font-weight: 600; letter-spacing: 0.5px; margin-bottom: 3px; }
+.header-greeting { font-size: 27px; font-weight: 700; letter-spacing: -0.5px; }
+.header-sub { font-size: 13px; color: rgba(255,255,255,0.42); margin-top: 4px; }
+.status-badge { padding: 7px 12px; border-radius: 10px; font-size: 11px; font-weight: 700; text-align: center; cursor: pointer; white-space: nowrap; }
+.status-connected { background: rgba(80,220,120,0.12); border: 1px solid rgba(80,220,120,0.28); color: #50dc78; }
+.status-loading { background: rgba(100,160,255,0.12); border: 1px solid rgba(100,160,255,0.28); color: #6eb4ff; }
+.status-error { background: rgba(255,80,80,0.12); border: 1px solid rgba(255,80,80,0.28); color: #ff6060; }
+
+/* Loading bar */
+.load-bar-wrap { margin: 0 20px 16px; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; }
+.load-bar { height: 100%; background: linear-gradient(90deg, #8b7cf8, #60b8ff); border-radius: 2px; transition: width 0.3s; }
+
+/* Scenes */
+.section-title { font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.8); margin-bottom: 13px; }
+.scenes-wrap { padding: 0 20px 22px; }
+.scenes-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.scene-btn { border: none; border-radius: 18px; padding: 13px 10px; display: flex; flex-direction: column; align-items: center; gap: 7px; cursor: pointer; min-width: 74px; flex-shrink: 0; transition: all 0.2s; font-family: inherit; }
+.scene-btn span.label { font-size: 11px; font-weight: 700; white-space: nowrap; }
+.scene-btn:hover { transform: scale(1.06); }
+
+/* Room tabs */
+.tabs-wrap { padding: 0 20px 18px; }
+.tabs-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+.tab-btn { padding: 8px 16px; border-radius: 22px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; white-space: nowrap; flex-shrink: 0; font-family: inherit; transition: all 0.2s; }
+.tab-active { background: #fff; color: #0c0c1a; }
+.tab-inactive { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.52); }
+
+/* Device grid */
+.grid-wrap { padding: 0 20px; }
+.device-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.device-card {
+background: rgba(255,255,255,0.04);
+border: 1px solid rgba(255,255,255,0.06);
+border-radius: 20px; padding: 18px 15px 14px;
+cursor: pointer; position: relative; overflow: hidden;
+transition: all 0.22s cubic-bezier(0.34,1.56,0.64,1);
+backdrop-filter: blur(10px); user-select: none;
+}
+.device-card.on { background: linear-gradient(145deg, rgba(255,255,255,0.11), rgba(255,255,255,0.05)); border-color: rgba(255,255,255,0.16); }
+.device-card:hover { transform: translateY(-2px) scale(1.02); }
+.device-glow { position: absolute; top: -24px; right: -24px; width: 80px; height: 80px; border-radius: 50%; filter: blur(32px); opacity: 0.3; pointer-events: none; }
+.device-badge { position: absolute; top: 9px; right: 9px; font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 5px; }
+.badge-offline { background: rgba(255,60,60,0.18); color: #ff6868; }
+.badge-loading { background: rgba(100,160,255,0.2); color: #60b8ff; }
+.device-icon { width: 42px; height: 42px; border-radius: 13px; margin-bottom: 13px; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+.device-name { font-size: 13px; font-weight: 600; margin-bottom: 10px; line-height: 1.3; min-height: 32px; }
+.device-footer { display: flex; align-items: center; justify-content: space-between; }
+.device-status { font-size: 11px; font-weight: 500; }
+
+/* Toggle */
+.toggle { border-radius: 12px; position: relative; cursor: pointer; transition: background 0.3s; flex-shrink: 0; }
+.toggle-knob { position: absolute; top: 3px; border-radius: 50%; background: #fff; transition: left 0.25s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 1px 5px rgba(0,0,0,0.35); }
+
+/* Bottom nav */
+.bottom-nav {
+position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+width: 100%; max-width: 480px;
+background: rgba(12,12,26,0.94); backdrop-filter: blur(22px);
+border-top: 1px solid rgba(255,255,255,0.07);
+display: flex; justify-content: space-around;
+padding: 10px 0 28px; z-index: 100;
+}
+.nav-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; cursor: pointer; font-family: inherit; transition: color 0.2s; padding: 4px 40px; }
+.nav-btn span { font-size: 10px; font-weight: 700; letter-spacing: 0.2px; }
+.nav-active { color: #ffd54f; }
+.nav-inactive { color: rgba(255,255,255,0.3); }
+
+/* Sheet */
+.sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(24px); display: flex; align-items: flex-end; justify-content: center; z-index: 1000; }
+.sheet { background: linear-gradient(180deg, #1e1e32 0%, #131320 100%); border-radius: 28px 28px 0 0; padding: 0 22px 48px; width: 100%; max-width: 480px; border: 1px solid rgba(255,255,255,0.08); border-bottom: none; direction: rtl; max-height: 80vh; overflow-y: auto; }
+.sheet-handle { width: 38px; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; margin: 14px auto 0; }
+.sheet-header { display: flex; align-items: center; gap: 14px; padding: 20px 0 24px; }
+.sheet-icon { width: 54px; height: 54px; border-radius: 17px; display: flex; align-items: center; justify-content: center; }
+.sheet-name { font-size: 20px; font-weight: 700; }
+.sheet-state { font-size: 13px; margin-top: 3px; font-weight: 500; }
+
+.ctrl-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.ctrl-btn { flex: 1; padding: 12px 0; border-radius: 12px; border: none; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 700; transition: all 0.2s; }
+
+/* Settings */
+.settings-wrap { padding: 20px; }
+.settings-title { font-size: 22px; font-weight: 700; margin-bottom: 20px; }
+.settings-card { background: rgba(255,255,255,0.05); border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.07); margin-bottom: 16px; }
+.settings-row { padding: 15px 18px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.settings-row:last-child { border-bottom: none; }
+.settings-icon { font-size: 18px; width: 26px; text-align: center; }
+.settings-label { flex: 1; font-size: 14px; font-weight: 600; }
+.settings-value { font-size: 13px; color: rgba(255,255,255,0.38); }
+.refresh-btn { width: 100%; padding: 14px; border-radius: 16px; border: none; cursor: pointer; background: rgba(100,160,255,0.13); color: #6eb4ff; font-size: 15px; font-weight: 700; font-family: inherit; }
+
+.empty-state { text-align: center; padding: 52px 0; color: rgba(255,255,255,0.35); }
+.empty-state .emoji { font-size: 36px; margin-bottom: 14px; }
+</style>
+
+</head>
+<body>
+<div class="bg-orb1"></div>
+<div class="bg-orb2"></div>
+
+<div class="app">
+  <div class="header">
+    <div>
+      <div class="header-time" id="timeEl">--:--</div>
+      <div class="header-greeting" id="greetingEl">בוקר טוב 👋</div>
+      <div class="header-sub" id="subEl">טוען מכשירים...</div>
+    </div>
+    <div class="status-badge status-loading" id="statusBadge" onclick="loadDevices()">טוען...</div>
+  </div>
+
+  <div class="load-bar-wrap" id="loadBarWrap">
+    <div class="load-bar" id="loadBar" style="width:0%"></div>
+  </div>
+
+  <!-- Scenes -->
+
+  <div class="scenes-wrap">
+    <div class="section-title">סצנות</div>
+    <div class="scenes-row">
+      <button class="scene-btn" style="background:linear-gradient(135deg,rgba(139,124,248,0.1),rgba(139,124,248,0.05));border:1px solid rgba(139,124,248,0.2);" onclick="applyScene('night')">
+        <span style="font-size:22px">🌙</span><span class="label" style="color:#8b7cf8">לילה</span>
+      </button>
+      <button class="scene-btn" style="background:linear-gradient(135deg,rgba(255,213,79,0.1),rgba(255,213,79,0.05));border:1px solid rgba(255,213,79,0.2);" onclick="applyScene('morning')">
+        <span style="font-size:22px">☀️</span><span class="label" style="color:#ffd54f">בוקר</span>
+      </button>
+      <button class="scene-btn" style="background:linear-gradient(135deg,rgba(96,184,255,0.1),rgba(96,184,255,0.05));border:1px solid rgba(96,184,255,0.2);" onclick="applyScene('movie')">
+        <span style="font-size:22px">🎬</span><span class="label" style="color:#60b8ff">סרט</span>
+      </button>
+      <button class="scene-btn" style="background:linear-gradient(135deg,rgba(255,158,125,0.1),rgba(255,158,125,0.05));border:1px solid rgba(255,158,125,0.2);" onclick="applyScene('away')">
+        <span style="font-size:22px">🚪</span><span class="label" style="color:#ff9e7d">יציאה</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+
+  <div class="tabs-wrap">
+    <div class="tabs-row" id="tabsRow">
+      <button class="tab-btn tab-active" onclick="setRoom('all')">הכל</button>
+    </div>
+  </div>
+
+  <!-- Grid -->
+
+  <div class="grid-wrap">
+    <div class="device-grid" id="deviceGrid">
+      <div class="empty-state" style="grid-column:1/-1">
+        <div class="emoji">⏳</div>
+        <div>טוען מכשירים מ-Tuya...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings page (hidden) -->
+
+<div id="settingsPage" style="display:none">
+  <div class="settings-wrap">
+    <div class="settings-title">הגדרות</div>
+    <div class="settings-card">
+      <div class="settings-row"><span class="settings-icon">👤</span><span class="settings-label">חשבון</span><span class="settings-value">inbatayar@gmail.com</span></div>
+      <div class="settings-row"><span class="settings-icon">🔌</span><span class="settings-label">Proxy</span><span class="settings-value">Pipedream</span></div>
+      <div class="settings-row"><span class="settings-icon">📡</span><span class="settings-label">סטטוס</span><span class="settings-value" id="settingsStatus" style="color:#50dc78">מחובר ✓</span></div>
+      <div class="settings-row"><span class="settings-icon">📱</span><span class="settings-label">סה״כ מכשירים</span><span class="settings-value" id="settingsTotal">0</span></div>
+      <div class="settings-row"><span class="settings-icon">✅</span><span class="settings-label">מחוברים</span><span class="settings-value" id="settingsOnline">0</span></div>
+    </div>
+    <button class="refresh-btn" onclick="loadDevices()">🔄 רענן מכשירים</button>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+
+<div class="bottom-nav">
+  <button class="nav-btn nav-active" id="navHome" onclick="showTab('home')">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor" width="20" height="20"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 21V12h6v9" stroke-linecap="round"/></svg>
+    <span>בית</span>
+  </button>
+  <button class="nav-btn nav-inactive" id="navSettings" onclick="showTab('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor" width="20" height="20"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke-linecap="round"/></svg>
+    <span>הגדרות</span>
+  </button>
+</div>
+
+<!-- Sheet -->
+
+<div class="sheet-overlay" id="sheetOverlay" style="display:none" onclick="closeSheet()">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-icon" id="sheetIcon"></div>
+      <div style="flex:1">
+        <div class="sheet-name" id="sheetName"></div>
+        <div class="sheet-state" id="sheetState"></div>
+      </div>
+      <div id="sheetToggle"></div>
+    </div>
+    <div id="sheetControls"></div>
+  </div>
+</div>
+
+<script>
+const PROXY = 'https://eo5iek7oth7tuax.m.pipedream.net';
+let allRooms = {};
+let allDevicesMap = {};
+let currentRoom = 'all';
+let currentTab = 'home';
+let currentSheet = null;
+
+// Icons
+const ICONS = {
+  light: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor" width="22" height="22"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 7 7c0 2.5-1.5 4.7-3.5 5.9V17a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-2.1A7 7 0 0 1 12 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  fan: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor" width="22" height="22"><circle cx="12" cy="12" r="2"/><path d="M12 10C12 6 15 3 15 3s-1 4 1 6M14 12c4 0 7-3 7-3s-4 1-6-1M12 14c0 4-3 7-3 7s1-4-1-6M10 12c-4 0-7 3-7 3s4-1 6 1" stroke-linecap="round"/></svg>`,
+  climate: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor" width="22" height="22"><rect x="2" y="6" width="20" height="9" rx="2"/><path d="M6 15v3M10 15v3M14 15v3M18 15v3M6 10h.01M10 10h4" stroke-linecap="round"/></svg>`,
+  curtain: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor" width="22" height="22"><rect x="2" y="3" width="20" height="1.5" rx=".75"/><path d="M5 4.5v15M19 4.5v15M5 19.5Q8 15 12 14q4 1 7 5.5" stroke-linecap="round"/></svg>`,
+  sensor: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor" width="22" height="22"><path d="M12 20h.01M8.5 16.5a5 5 0 0 1 7 0M5 13a9 9 0 0 1 14 0M1.5 9.5a14 14 0 0 1 21 0" stroke-linecap="round"/></svg>`,
+  lock: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor" width="22" height="22"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-linecap="round"/></svg>`,
+  switch: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor" width="22" height="22"><rect x="2" y="8" width="20" height="8" rx="4"/><circle cx="16" cy="12" r="2.5" fill="currentColor" opacity=".5"/></svg>`,
+  tv: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor" width="22" height="22"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4" stroke-linecap="round"/></svg>`,
+  plug: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke="currentColor" width="22" height="22"><path d="M12 2v4M8 2v4" stroke-linecap="round"/><rect x="5" y="6" width="10" height="7" rx="2"/><path d="M10 13v4a2 2 0 0 0 4 0v-4" stroke-linecap="round"/></svg>`,
+};
+
+const ACCENTS = { light:'#ffd54f', climate:'#60b8ff', fan:'#7ee8a2', curtain:'#c4a882', tv:'#a78bfa', sensor:'#f472b6', lock:'#fb923c', plug:'#34d399', switch:'#ffd54f' };
+
+function getAccent(type) { return ACCENTS[type] || '#ffd54f'; }
+function getIcon(type) { return ICONS[type] || ICONS.switch; }
+
+function detectType(cat, name) {
+  cat = (cat||'').toLowerCase(); name = (name||'').toLowerCase();
+  if (['dj','dd','fwl','dc','xdd','wf','wfb'].includes(cat) || name.includes('light') || name.includes('תאורת') || name.includes('אור')) return 'light';
+  if (['fs','fsd'].includes(cat) || name.includes('fan') || name.includes('מאוורר')) return 'fan';
+  if (['kt'].includes(cat) || name.includes('ac') || name.includes('מזגן') || name.includes('air')) return 'climate';
+  if (['cl','clkg','mcd'].includes(cat) || name.includes('curtain') || name.includes('blind') || name.includes('shutter') || name.includes('תרס') || name.includes('וילון') || name.includes('roller')) return 'curtain';
+  if (['ms','pir'].includes(cat) || name.includes('sensor') || name.includes('presence') || name.includes('smoke') || name.includes('flood') || name.includes('water') || name.includes('contact')) return 'sensor';
+  if (['jtmspro','jtm','mc'].includes(cat) || name.includes('door') || name.includes('lock') || name.includes('gate') || name.includes('garage') || name.includes('שער') || name.includes('דלת')) return 'lock';
+  if (['tv','qt'].includes(cat) || name.includes('tv') || name.includes('טלוויזיה')) return 'tv';
+  if (['wxkg'].includes(cat) || name.includes('switch') || name.includes('wireless')) return 'switch';
+  return 'switch';
+}
+
+function detectRoom(name) {
+  name = (name||'').toLowerCase();
+  if (name.includes('סלון') || name.includes('living')) return 'סלון';
+  if (name.includes('הורים') || name.includes('bedroom') || name.includes('master') || name.includes('שינה')) return 'חדר הורים';
+  if (name.includes('בנים') || name.includes('ילדים') || name.includes('kids') || name.includes('boys')) return 'חדר ילדים';
+  if (name.includes('מטבח') || name.includes('kitchen')) return 'מטבח';
+  if (name.includes('חצר') || name.includes('garden') || name.includes('outdoor')) return 'חוץ';
+  if (name.includes('שער') || name.includes('garage') || name.includes('gate') || name.includes('כניסה') || name.includes('entrance')) return 'כניסה';
+  if (name.includes('מסבה') || name.includes('dining') || name.includes('אוכל')) return 'פינת אוכל';
+  if (name.includes('מאוורר') || name.includes('fan')) return 'מאורות';
+  if (name.includes('sensor') || name.includes('smoke') || name.includes('flood') || name.includes('water') || name.includes('contact') || name.includes('presence') || name.includes('wireless') || name.includes('infrared') || name.includes('remote')) return 'חיישנים';
+  return 'כללי';
+}
+
+function getPower(status) {
+  if (!status) return null;
+  for (const k of ['switch_led','switch_led_1','switch','switch_1','Power','power']) {
+    if (k in status) return { key: k, on: status[k] === true || status[k] === 'on' };
+  }
+  return null;
+}
+
+function makeToggle(on, accent, disabled, size) {
+  const w = size==='lg'?54:42, h = size==='lg'?30:24, k = size==='lg'?22:18, g = (h-k)/2;
+  const bg = on && !disabled ? accent : 'rgba(255,255,255,0.12)';
+  const left = on && !disabled ? w-k-g : g;
+  const shadow = on && !disabled ? `0 2px 14px ${accent}66` : 'none';
+  return `<div style="width:${w}px;height:${h}px;border-radius:${h/2}px;background:${bg};position:relative;cursor:${disabled?'not-allowed':'pointer'};transition:background 0.3s;flex-shrink:0;box-shadow:${shadow};opacity:${disabled?0.4:1}"><div style="position:absolute;top:${g}px;left:${left}px;width:${k}px;height:${k}px;border-radius:50%;background:#fff;transition:left 0.25s;box-shadow:0 1px 5px rgba(0,0,0,0.35)"></div></div>`;
+}
+
+// Clock
+function updateClock() {
+  const now = new Date();
+  const h = now.getHours();
+  const timeStr = now.toLocaleTimeString('he-IL', {hour:'2-digit',minute:'2-digit'});
+  const greeting = h<5?'לילה טוב 🌙':h<12?'בוקר טוב ☀️':h<17?'צהריים טובים 🌤':h<21?'ערב טוב 🌆':'לילה טוב 🌙';
+  document.getElementById('timeEl').textContent = timeStr;
+  document.getElementById('greetingEl').textContent = greeting;
+}
+updateClock();
+setInterval(updateClock, 30000);
+
+// Load devices
+async function loadDevices() {
+  setBadge('loading', 'טוען...');
+  document.getElementById('loadBarWrap').style.display = 'block';
+  document.getElementById('loadBar').style.width = '10%';
+
+  let devices = [];
+  let page = 1;
+  while (true) {
+    try {
+      const r = await fetch(`${PROXY}/v2.0/cloud/thing/device?page_no=${page}&page_size=20`);
+      const data = await r.json();
+      const items = Array.isArray(data.result) ? data.result : [];
+      if (!items.length) break;
+      devices = [...devices, ...items];
+      document.getElementById('loadBar').style.width = Math.min(90, 10 + devices.length * 2) + '%';
+      if (items.length < 20) break;
+      page++;
+    } catch(e) { break; }
+  }
+
+  document.getElementById('loadBar').style.width = '100%';
+  setTimeout(() => { document.getElementById('loadBarWrap').style.display = 'none'; }, 500);
+
+  if (devices.length === 0) {
+    setBadge('error', 'שגיאה ↺');
+    document.getElementById('subEl').textContent = 'לא נמצאו מכשירים';
+    return;
+  }
+
+  // Group into rooms
+  allRooms = {};
+  allDevicesMap = {};
+  const roomIcons = {'סלון':'🛋️','חדר הורים':'🛏️','חדר ילדים':'👦','מטבח':'🍳','חוץ':'🌿','כניסה':'🚪','פינת אוכל':'🍽️','מאורות':'💡','חיישנים':'📡','כללי':'📦'};
+
+  devices.forEach(dev => {
+    const name = dev.name || dev.customName || dev.id;
+    const type = detectType(dev.category, name);
+    const room = detectRoom(name);
+    if (!allRooms[room]) allRooms[room] = { name: room, icon: roomIcons[room]||'📦', devices: [] };
+    const status = {};
+    if (dev.status) dev.status.forEach(s => { status[s.code] = s.value; });
+    const d = { id: dev.id, name, type, online: dev.isOnline !== false, status, category: dev.category };
+    allRooms[room].devices.push(d);
+    allDevicesMap[dev.id] = d;
+  });
+
+  setBadge('connected', 'מחובר ✓');
+  updateStats();
+  renderTabs();
+  renderGrid();
+  updateSettings(devices.length);
+}
+
+function setBadge(type, text) {
+  const el = document.getElementById('statusBadge');
+  el.className = 'status-badge status-' + type;
+  el.textContent = text;
+}
+
+function updateStats() {
+  const all = Object.values(allDevicesMap);
+  const online = all.filter(d => d.online).length;
+  const active = all.filter(d => { const p = getPower(d.status); return d.online && p?.on; }).length;
+  document.getElementById('subEl').textContent = `${active} פעילים · ${online} מחוברים`;
+  document.getElementById('settingsOnline').textContent = online;
+}
+
+function updateSettings(total) {
+  document.getElementById('settingsTotal').textContent = total;
+  document.getElementById('settingsStatus').textContent = 'מחובר ✓';
+}
+
+function renderTabs() {
+  const row = document.getElementById('tabsRow');
+  row.innerHTML = `<button class="tab-btn ${currentRoom==='all'?'tab-active':'tab-inactive'}" onclick="setRoom('all')">הכל</button>`;
+  Object.entries(allRooms).sort((a,b)=>a[0].localeCompare(b[0],'he')).forEach(([id, room]) => {
+    const active = currentRoom === id;
+    row.innerHTML += `<button class="tab-btn ${active?'tab-active':'tab-inactive'}" onclick="setRoom('${id}')">${room.icon} ${room.name}</button>`;
+  });
+}
+
+function setRoom(id) {
+  currentRoom = id;
+  renderTabs();
+  renderGrid();
+}
+
+function getVisibleDevices() {
+  if (currentRoom === 'all') return Object.values(allDevicesMap);
+  return allRooms[currentRoom]?.devices || [];
+}
+
+function renderGrid() {
+  const grid = document.getElementById('deviceGrid');
+  const devices = getVisibleDevices();
+  if (!devices.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="emoji">📦</div><div>אין מכשירים</div></div>';
+    return;
+  }
+  grid.innerHTML = devices.map(d => renderCard(d)).join('');
+}
+
+function renderCard(d) {
+  const power = getPower(d.status);
+  const isOn = power?.on;
+  const accent = isOn && d.online ? getAccent(d.type) : null;
+  const icon = getIcon(d.type);
+  const iconBg = accent ? `${accent}28` : 'rgba(255,255,255,0.07)';
+  const iconColor = accent || 'rgba(255,255,255,0.28)';
+  const iconShadow = accent ? `0 4px 18px ${accent}44` : 'none';
+  const statusText = !d.online ? 'לא מחובר' : isOn ? 'פועל' : 'כבוי';
+  const statusColor = accent || 'rgba(255,255,255,0.28)';
+  const toggleDisabled = !d.online || !power;
+  const toggle = makeToggle(!!isOn, getAccent(d.type), toggleDisabled, 'sm');
+
+  return `<div class="device-card ${isOn&&d.online?'on':''}" onclick="openSheet('${d.id}')">
+    ${accent ? `<div class="device-glow" style="background:${accent}"></div>` : ''}
+    ${!d.online ? '<div class="device-badge badge-offline">OFFLINE</div>' : ''}
+    <div class="device-icon" style="background:${iconBg};color:${iconColor};box-shadow:${iconShadow}">
+      ${icon}
+    </div>
+    <div class="device-name" style="color:${d.online?'#fff':'rgba(255,255,255,0.35)'}">${d.name}</div>
+    <div class="device-footer">
+      <span class="device-status" style="color:${statusColor}">${statusText}</span>
+      <div onclick="event.stopPropagation();toggleDevice('${d.id}')">${toggle}</div>
+    </div>
+  </div>`;
+}
+
+async function toggleDevice(id) {
+  const d = allDevicesMap[id];
+  if (!d || !d.online) return;
+  const power = getPower(d.status);
+  if (!power) return;
+  const newVal = !power.on;
+  d.status[power.key] = newVal;
+  renderGrid();
+  updateStats();
+  if (currentSheet === id) openSheet(id);
+  try {
+    await fetch(`${PROXY}/v1.0/devices/${id}/commands`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({commands:[{code:power.key,value:newVal}]})
+    });
+  } catch(e) {}
+}
+
+function openSheet(id) {
+  const d = allDevicesMap[id];
+  if (!d) return;
+  currentSheet = id;
+  const power = getPower(d.status);
+  const isOn = power?.on;
+  const accent = getAccent(d.type);
+  const icon = getIcon(d.type);
+
+  document.getElementById('sheetIcon').innerHTML = icon;
+  document.getElementById('sheetIcon').style.cssText = `width:54px;height:54px;border-radius:17px;display:flex;align-items:center;justify-content:center;background:${isOn?accent+'22':'rgba(255,255,255,0.06)'};color:${isOn?accent:'rgba(255,255,255,0.3)'};box-shadow:${isOn?`0 4px 20px ${accent}44`:'none'}`;
+  document.getElementById('sheetName').textContent = d.name;
+  document.getElementById('sheetState').textContent = !d.online?'לא מחובר':isOn?'פועל':'כבוי';
+  document.getElementById('sheetState').style.color = isOn ? accent : 'rgba(255,255,255,0.4)';
+
+  const toggleEl = document.getElementById('sheetToggle');
+  if (power) {
+    toggleEl.innerHTML = makeToggle(!!isOn, accent, !d.online, 'lg');
+    toggleEl.onclick = () => toggleDevice(id);
+  } else {
+    toggleEl.innerHTML = '';
+  }
+
+  // Controls
+  const ctrl = document.getElementById('sheetControls');
+  if (d.type === 'curtain' && d.online) {
+    ctrl.innerHTML = `<div class="ctrl-row">
+      ${['open','stop','close'].map(v => {
+        const label = v==='open'?'פתח ↑':v==='stop'?'עצור ■':'סגור ↓';
+        const active = d.status?.control === v;
+        return `<button class="ctrl-btn" style="background:${active?accent+'33':'rgba(255,255,255,0.07)'};color:${active?accent:'rgba(255,255,255,0.55)'}" onclick="sendCommand('${id}','control','${v}')">${label}</button>`;
+      }).join('')}
+    </div>`;
+  } else if (d.type === 'climate' && isOn && d.online) {
+    const temp = d.status?.temp_set ?? 22;
+    ctrl.innerHTML = `<div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:11px;color:rgba(255,255,255,0.4);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">טמפרטורה</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:28px">
+        <button onclick="changeTemp('${id}',-1)" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);color:#fff;font-size:26px;cursor:pointer;line-height:1">−</button>
+        <div id="tempDisplay" style="font-size:64px;font-weight:200;color:${accent};letter-spacing:-4px;margin:-8px 0">${temp}°</div>
+        <button onclick="changeTemp('${id}',1)" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);color:#fff;font-size:26px;cursor:pointer;line-height:1">+</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      ${[{v:'cold',l:'קירור ❄️'},{v:'hot',l:'חימום 🔥'},{v:'wind',l:'אוורור 💨'},{v:'auto',l:'אוטו 🤖'}].map(m=>{
+        const active = d.status?.mode === m.v;
+        return `<button class="ctrl-btn" style="flex:1;font-size:11px;background:${active?accent+'33':'rgba(255,255,255,0.07)'};color:${active?accent:'rgba(255,255,255,0.55)'}" onclick="sendCommand('${id}','mode','${m.v}')">${m.l}</button>`;
+      }).join('')}
+    </div>`;
+  } else if (d.type === 'fan' && isOn && d.online) {
+    ctrl.innerHTML = `<div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.45);font-weight:600;margin-bottom:12px">מהירות</div>
+      <div style="display:flex;gap:8px">
+        ${['1','2','3','4','5'].map(s=>{
+          const active = d.status?.fan_speed_enum === s;
+          return `<button class="ctrl-btn" style="font-size:18px;background:${active?accent+'33':'rgba(255,255,255,0.07)'};color:${active?accent:'rgba(255,255,255,0.55)'}" onclick="sendCommand('${id}','fan_speed_enum','${s}')">${s}</button>`;
+        }).join('')}
+      </div>
+    </div>`;
+  } else if (d.type === 'light' && isOn && d.online) {
+    const bv = d.status?.bright_value_v2 ?? d.status?.bright_value ?? 500;
+    ctrl.innerHTML = `<div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:13px;color:rgba(255,255,255,0.45);font-weight:600">בהירות</span>
+        <span id="brightPct" style="font-size:13px;color:${accent};font-weight:700">${Math.round(bv/10)}%</span>
+      </div>
+      <input type="range" min="10" max="1000" value="${bv}" style="width:100%;accent-color:${accent}" oninput="document.getElementById('brightPct').textContent=Math.round(this.value/10)+'%'" onchange="sendCommand('${id}','bright_value_v2',parseInt(this.value))">
+    </div>`;
+  } else {
+    ctrl.innerHTML = '';
+  }
+
+  document.getElementById('sheetOverlay').style.display = 'flex';
+}
+
+function closeSheet() {
+  document.getElementById('sheetOverlay').style.display = 'none';
+  currentSheet = null;
+}
+
+async function sendCommand(id, code, value) {
+  const d = allDevicesMap[id];
+  if (!d) return;
+  d.status[code] = value;
+  renderGrid();
+  updateStats();
+  openSheet(id);
+  try {
+    await fetch(`${PROXY}/v1.0/devices/${id}/commands`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({commands:[{code,value}]})
+    });
+  } catch(e) {}
+}
+
+async function changeTemp(id, delta) {
+  const d = allDevicesMap[id];
+  if (!d) return;
+  const newTemp = (d.status?.temp_set ?? 22) + delta;
+  d.status.temp_set = newTemp;
+  document.getElementById('tempDisplay').textContent = newTemp + '°';
+  try {
+    await fetch(`${PROXY}/v1.0/devices/${id}/commands`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({commands:[{code:'temp_set',value:newTemp}]})
+    });
+  } catch(e) {}
+}
+
+function showTab(tab) {
+  currentTab = tab;
+  const home = document.getElementById('navHome');
+  const settings = document.getElementById('navSettings');
+  const app = document.querySelector('.app');
+  const settingsPage = document.getElementById('settingsPage');
+
+  if (tab === 'home') {
+    home.className = 'nav-btn nav-active';
+    settings.className = 'nav-btn nav-inactive';
+    app.style.display = 'block';
+    settingsPage.style.display = 'none';
+  } else {
+    home.className = 'nav-btn nav-inactive';
+    settings.className = 'nav-btn nav-active';
+    app.style.display = 'none';
+    settingsPage.style.display = 'block';
+  }
+}
+
+function applyScene(scene) {
+  Object.values(allDevicesMap).forEach(d => {
+    if (!d.online) return;
+    const power = getPower(d.status);
+    if (!power) return;
+    if (scene === 'night' || scene === 'away') {
+      d.status[power.key] = false;
+    } else if (scene === 'morning') {
+      d.status[power.key] = true;
+      if (d.type === 'light') { d.status.bright_value_v2 = 500; d.status.bright_value = 500; }
+    } else if (scene === 'movie') {
+      if (d.type === 'light') { d.status[power.key] = true; d.status.bright_value_v2 = 150; }
+      else if (d.type !== 'tv') d.status[power.key] = false;
+    }
+  });
+  renderGrid();
+  updateStats();
+}
+
+// Start
+loadDevices();
+</script>
+
+</body>
+</html>
